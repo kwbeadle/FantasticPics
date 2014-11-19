@@ -2,13 +2,12 @@
 $myServer = "http://www.kbeadle.com/fantasticpics.php";
 $server_list = array(
   "master" => "http://www.kbeadle.com/fantasticpics.php",
-  "node1" => "http://php-sytes.rhcloud.com/fantasticpics.php",
-  "node2" => "http://php2-sytes.rhcloud.com/fantasticpics.php",
-  "node3" => "http://php3-sytes.rhcloud.com/fantasticpics.php"
+  "node1" => "/fantasticpics.php",
+  "node2" => "/fantasticpics.php",
+  "node3" => "/fantasticpics.php"
 );
 
 function STOR() {
-  #$uploaddir = realpath('./uploads') . '/';  
   $uploaddir = "./uploads/";
   if (!is_dir($uploaddir)) {
     mkdir($uploaddir, 0777, true);
@@ -22,7 +21,7 @@ function STOR() {
 }
 
 function send_file($file_name, $target_url) {
-  $file_name_with_full_path = realpath($file_name);
+  $file_name_with_full_path = realpath("./uploads/." . $file_name);
   $post = array("SRC" => $myServer, "CMD" => "STOR", 'file_contents' => '@' .$file_name_with_full_path);  
   $ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $target_url);
@@ -60,11 +59,18 @@ if ($myServer === $server_list["master"]) {
           send_file($_FILES["file_contents"]["name"], $val);          
         }
       }
+    } else if ($CMD === "SYNC") {
+
+      // Get files list and sync files with other servers
     }
   } else {
 
     // Command coming from other server nodes.
-    if ($CMD === "STOR") {
+    if ($CMD === "DELE") {
+
+    } else if ($CMD === "MKD") {
+
+    } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
       STOR();
@@ -74,28 +80,43 @@ if ($myServer === $server_list["master"]) {
         if ($SRC != $val) {
           send_file($_FILES["file_contents"]["name"], $val);          
         }
-      } 
+      }
+    } else if ($CMD === "SYNC") {
+
     }
   }
 } else {
 
   // Logic for other nodes
   if ($SRC === "client") {
-    if ($CMD === "STOR") {
+    if ($CMD === "DELE") {
+
+    } else if ($CMD === "MKD") {
+
+    } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
       STOR();
 
       // Send file to master server.
       send_file($_FILES["file_contents"]["name"], $server_list["master"]);                
+    } else if ($CMD === "SYNC") {
+
     }
   } else if ($SRC == $server_list["master"]) {
-    if ($CMD === "STOR") {
+    if ($CMD === "DELE") {
+
+    } else if ($CMD === "MKD") {
+
+    } else if ($CMD === "STOR") {
+
+    } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
       STOR();             
+    } else if ($CMD === "SYNC") {
+
     }
   }
 }
 ?>
-
