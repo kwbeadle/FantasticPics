@@ -5,15 +5,15 @@ error_reporting(E_ALL | E_STRICT);
 $myServer = "http://www.kbeadle.com/fp/fantasticpics.php";
 // May store server list to MySQL database later
 $server_list = array(
-  "master" => "http://www.kbeadle.com/fantasticpics.php",
-  "node1" => "/fantasticpics.php",
-  "node2" => "/fantasticpics.php",
-  "node3" => "/fantasticpics.php"
+  "master" => "http://www.kbeadle.com/fp/fantasticpics.php",
+  "node1" => "http://rajat-bansal.com/fantasticpics.php",
+  "node2" => "http://vybbhav9.com/fantasticpics.php",
+  "node3" => "http://gangania19.com/fantasticpics.php"
 );
 $master_db = array(
-  "servername" => "mysql",
-  "username" => "kb",
-  "password" => "kbdb73"
+  "servername" => "",
+  "username" => "",
+  "password" => ""
 );
 
 function DELE($target_file) {
