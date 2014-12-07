@@ -5,7 +5,6 @@ error_reporting(E_ALL | E_STRICT);
 $myUser = "master";
 $myPass = "master";
 $myServer = "http://www.kbeadle.com/fp/fantasticpics.php";
-// May store server list to MySQL database later
 $server_list = array(
   "master" => "http://www.kbeadle.com/fp/fantasticpics.php",
   "node1" => "http://rajat-bansal.com/fantasticpics.php",
@@ -13,10 +12,10 @@ $server_list = array(
   "node3" => "http://gangania19.com/fantasticpics.php"
 );
 $user_list = array(
-  "master" => "master",
-  "user1" => "user1",
-  "user2" => "user2",
-  "user3" => "user3"
+  "kevin" => "abcdef",
+  "rajat" => "abcdef",
+  "vybbhav" => "abcdef",
+  "shivani" => "abcdef"
 );
 $master_db = array(
   "servername" => "",
@@ -479,14 +478,7 @@ function proc_cmd_to_node() {
   }
 }
 
-// Add get methods 
-//$CMD = isset($_GET["CMD"]) ? $_GET["CMD"] : NULL;
-#extract($_POST);
-if (isset($_FILE["filename"])) {
-  echo $_FILE["filename"];
-  die();
-}
-
+// First check if user and password is valid.
 if (isset($_POST["USER"]) && isset($_POST["PASS"])) {
   $USER = $_POST["USER"];
   $PASS = $_POST["PASS"];
@@ -500,6 +492,7 @@ if (isset($_POST["USER"]) && isset($_POST["PASS"])) {
   die("Invalid username or password");  
 }
 
+// Get command and its source
 if (isset($_POST["CMD"]) && isset($_POST["SRC"])) {
   $CMD = $_POST["CMD"];
   $SRC = $_POST["SRC"];
