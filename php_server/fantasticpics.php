@@ -2,6 +2,8 @@
 ini_set('display_errors', 'On');
 error_reporting(E_ALL | E_STRICT);
 
+$myUser = "master";
+$myPass = "master";
 $myServer = "http://www.kbeadle.com/fp/fantasticpics.php";
 // May store server list to MySQL database later
 $server_list = array(
@@ -9,6 +11,12 @@ $server_list = array(
   "node1" => "http://rajat-bansal.com/fantasticpics.php",
   "node2" => "http://vybbhav9.com/fantasticpics.php",
   "node3" => "http://gangania19.com/fantasticpics.php"
+);
+$user_list = array(
+  "master" => "master",
+  "user1" => "user1",
+  "user2" => "user2",
+  "user3" => "user3"
 );
 $master_db = array(
   "servername" => "",
@@ -18,34 +26,41 @@ $master_db = array(
 
 function DELE($target_file) {
   $file_name_with_full_path = realpath($target_file);
-  unlink($file_name_with_full_path); 
+  if (file_exists($file_name_with_full_path)) {
+    unlink($file_name_with_full_path);
+  }
 }
 
-function NLST($target_dir) {
-  $files = scandir($dir); 
-  $list = array();
-  foreach ($files as $file) {
-    if (is_file($dir.$file)) {
-      $list[] = $dir.$file;
+function NLST($dir) {
+  global $master_db;  
+  if (file_exists($dir)) {
+    $di = new RecursiveDirectoryIterator("$dir",RecursiveDirectoryIterator::SKIP_DOTS);
+    $it = new RecursiveIteratorIterator($di);
+    foreach ($it as $filename => $file) {
+      $path_parts = pathinfo($file);
+      if ($path_parts["extension"] != "php") {
+        echo $filename . ' - ' . $file->getSize() . ' bytes <br/>';
+      }
     }
-  }
-  return $list;
+  } 
 }
 
 function RMD($target_dir) {
-  $it = new RecursiveDirectoryIterator($target_dir, RecursiveDirectoryIterator::SKIP_DOTS);
-  $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
-  foreach($files as $file) {
-    if ($file->getFilename() === '.' || $file->getFilename() === '..') {
-        continue;
+  if (file_exists($target_dir)) {
+    $it = new RecursiveDirectoryIterator($target_dir, RecursiveDirectoryIterator::SKIP_DOTS);
+    $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+    foreach($files as $file) {
+      if ($file->getFilename() === '.' || $file->getFilename() === '..') {
+          continue;
+      }
+      if ($file->isDir()){
+          rmdir($file->getRealPath());
+      } else {
+          unlink($file->getRealPath());
+      }
     }
-    if ($file->isDir()){
-        rmdir($file->getRealPath());
-    } else {
-        unlink($file->getRealPath());
-    }
+    rmdir($target_dir);
   }
-  rmdir($target_dir);
 }
 
 function STOR($target_file) {
@@ -98,6 +113,15 @@ function SYNC() {
     echo "Error clearing table: " . mysql_error();
   }
 
+  // Add unique key to not store any duplicates
+  $sql = "ALTER TABLE `fpdb`.`files` ADD UNIQUE KEY `files_file` (`file`);";
+  $result = mysql_query($sql);
+  if ($result === TRUE) {
+    echo "Added unique key in table successfully";
+  } else {
+    echo "Error making unique key in table: " . mysql_error();
+  }
+
   // Make file list 
   $file_list = "";
   $di = new RecursiveDirectoryIterator("./",RecursiveDirectoryIterator::SKIP_DOTS);
@@ -133,23 +157,9 @@ function SYNC() {
   }
 }
 
-function send_delete_cmd($src_file, $target_file, $target_url) {
-  global $myServer;
-  $file_name_with_full_path = realpath($src_file);  
-  $post = array("SRC" => $myServer, "CMD" => "DELE", "FILE" => $target_file);  
-  $ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $target_url);
-	curl_setopt($ch, CURLOPT_POST, 1);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	$result = curl_exec($ch);
-	curl_close($ch);
-}
-
-function send_stor_cmd($src_file, $target_file, $target_url) {
-  global $myServer;
-  $file_name_with_full_path = realpath($src_file);
-  $post = array("SRC" =>$myServer, "CMD" => "STOR", "FILE" => $target_file, "file_contents" => "@" . $file_name_with_full_path);  
+function send_dele_cmd($target_file, $target_url) {
+  global $myServer, $myUser, $myPass;
+  $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" => $myServer, "CMD" => "DELE", "FILE" => $target_file);  
   $ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $target_url);
 	curl_setopt($ch, CURLOPT_POST, 1);
@@ -160,9 +170,53 @@ function send_stor_cmd($src_file, $target_file, $target_url) {
   echo $result;
 }
 
+function send_nlst_cmd($target_file, $target_url) {
+  global $myServer, $myUser, $myPass;
+  $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" => $myServer, "CMD" => "NLST", "FILE" => $target_file);  
+  $ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $target_url);
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	$result = curl_exec($ch);
+  curl_close($ch);
+  echo $result;
+}
+
+function send_rmd_cmd($target_file, $target_url) {
+  global $myServer, $myUser, $myPass;
+  $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" => $myServer, "CMD" => "RMD", "FILE" => $target_file);  
+  $ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $target_url);
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	$result = curl_exec($ch);
+  curl_close($ch);
+  echo $result;
+}
+
+function send_stor_cmd($src_file, $target_file, $target_url) {
+  global $myServer, $myUser, $myPass;
+  $file_name_with_full_path = realpath($src_file);
+  if (file_exists($file_name_with_full_path)) {
+    $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" =>$myServer, "CMD" => "STOR", "FILE" => $target_file, "file_contents" => "@" . $file_name_with_full_path);  
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $target_url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $result = curl_exec($ch);
+    curl_close($ch);
+    echo $result;
+  } else {
+    echo "Error file to send not found";
+  }
+}
+
 function send_sync_cmd($target_file, $target_url) {
-  global $myServer;
-  $post = array("SRC" => $myServer, "CMD" => "SYNC", "FILE" => $target_file);  
+  global $myServer, $myUser, $myPass;
+  $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" => $myServer, "CMD" => "SYNC", "FILE" => $target_file);  
   $ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $target_url);
 	curl_setopt($ch, CURLOPT_POST, 1);
@@ -174,8 +228,8 @@ function send_sync_cmd($target_file, $target_url) {
 }
 
 function send_retr_cmd($target_file, $target_url) {
-  global $myServer;
-  $post = array("SRC" => $myServer, "CMD" => "RETR", "FILE" => $target_file);  
+  global $myServer, $myUser, $myPass;
+  $post = array("USER" => $myUser, "PASS" => $myPass, "SRC" => $myServer, "CMD" => "RETR", "FILE" => $target_file);  
   $ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $target_url);
 	curl_setopt($ch, CURLOPT_POST, 1);
@@ -196,14 +250,52 @@ function proc_cmd_to_master() {
     if ($CMD === "DELE") {
 
       // Delete file.
+      DELE($FILE);
+
+      // Remove from database.
+      $conn = mysql_connect($master_db["servername"], $master_db["username"], $master_db["password"]);
+      if (!$conn) {
+        echo "Failed to connect to MySQL: " . mysql_error();
+      } 
+
+      // Delete file name from table
+      $sql = "DELETE FROM `fpdb`.`files` WHERE `files`.`file` = " . "'".$FILE."'";
+      $result = mysql_query($sql);    
+      if ($result === TRUE) {
+        echo "File name removed from table successfully";
+      } else {
+        echo "Error removing file name from table: " . mysql_error();
+      }
+
       foreach ($server_list as $key => $val) {
         if ($myServer != $val) {
-          send_delete_cmd($FILE, $FILE, $val);          
+          send_dele_cmd($FILE, $val);          
         }
       }
-    } else if ($CMD === "MKD") {
+    } else if ($CMD === "NLST") {
+      NLST($FILE);
+    } else if ($CMD === "RMD") {
 
-      // Make directory.
+      // Remove directory.
+      RMD($FILE);
+
+      // Remove frome database.
+      $conn = mysql_connect($master_db["servername"], $master_db["username"], $master_db["password"]);
+      if (!$conn) {
+        echo "Failed to connect to MySQL: " . mysql_error();
+      } 
+      $sql = "DELETE FROM `fpdb`.`files` WHERE `file` LIKE " . "'%".$FILE."%'";
+            $result = mysql_query($sql);    
+      if ($result === TRUE) {
+        echo "Directory name removed from table successfully";
+      } else {
+        echo "Error removing directory name from table: " . mysql_error();
+      }
+      foreach ($server_list as $key => $val) {
+        if ($myServer != $val) {
+          send_rmd_cmd($FILE, $val);          
+        }
+      }
     } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
@@ -227,7 +319,7 @@ function proc_cmd_to_master() {
       // Send file to other servers.
       foreach ($server_list as $key => $val) {
         if ($myServer != $val) {
-          send_stor_cmd($FILE, $FILE, $val);          
+          send_stor_cmd($FILE, $FILE, $val);
         }
       }
     } else if ($CMD === "SYNC") {
@@ -240,8 +332,53 @@ function proc_cmd_to_master() {
     // Command coming from other server nodes.
     if ($CMD === "DELE") {
 
-    } else if ($CMD === "MKD") {
+      // Delete file.
+      DELE($FILE);
 
+      // Remove from database.
+      $conn = mysql_connect($master_db["servername"], $master_db["username"], $master_db["password"]);
+      if (!$conn) {
+        echo "Failed to connect to MySQL: " . mysql_error();
+      } 
+
+      // Delete file name from table
+      $sql = "DELETE FROM `fpdb`.`files` WHERE `files`.`file` = " . "'".$FILE."'";
+      $result = mysql_query($sql);    
+      if ($result === TRUE) {
+        echo "File name removed from table successfully";
+      } else {
+        echo "Error removing file name from table: " . mysql_error();
+      }
+
+      foreach ($server_list as $key => $val) {
+        if ($SRC != $val && $myServer != $val) {
+          send_dele_cmd($FILE, $val);          
+        }
+      }
+    } else if ($CMD === "NLST") {
+      NLST($FILE);
+    } else if ($CMD === "RMD") {
+      
+      // Remove directory.
+      RMD($FILE);
+
+      // Remove frome database.
+      $conn = mysql_connect($master_db["servername"], $master_db["username"], $master_db["password"]);
+      if (!$conn) {
+        echo "Failed to connect to MySQL: " . mysql_error();
+      } 
+      $sql = "DELETE FROM `fpdb`.`files` WHERE `file` LIKE " . "'%".$FILE."%'";
+            $result = mysql_query($sql);    
+      if ($result === TRUE) {
+        echo "Directory name removed from table successfully";
+      } else {
+        echo "Error removing directory name from table: " . mysql_error();
+      }
+      foreach ($server_list as $key => $val) {
+        if ($SRC != $val && $myServer != $val) {
+          send_rmd_cmd($FILE, $val);          
+        }
+      }
     } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
@@ -287,9 +424,13 @@ function proc_cmd_to_node() {
   // Logic for other nodes
   if ($SRC === "client") {
     if ($CMD === "DELE") {
-
-    } else if ($CMD === "MKD") {
-
+      DELE($FILE);
+      send_dele_cmd($FILE, $server_list["master"]);
+    } else if ($CMD === "NLST") {
+      NLST($FILE);
+    } else if ($CMD === "RMD") {
+      RMD($FILE);
+      send_rmd_cmd($FILE, $server_list["master"]);
     } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
@@ -302,9 +443,11 @@ function proc_cmd_to_node() {
     }
   } else if ($SRC == $server_list["master"]) {
     if ($CMD === "DELE") {
-
-    } else if ($CMD === "MKD") {
-
+      DELE($FILE);
+    } else if ($CMD === "NLST") {
+      NLST($FILE);
+    } else if ($CMD === "RMD") {
+      RMD($FILE);
     } else if ($CMD === "STOR") {
 
       // Accept data and store data as a file at the server site.
@@ -338,8 +481,25 @@ function proc_cmd_to_node() {
 
 // Add get methods 
 //$CMD = isset($_GET["CMD"]) ? $_GET["CMD"] : NULL;
-
 #extract($_POST);
+if (isset($_FILE["filename"])) {
+  echo $_FILE["filename"];
+  die();
+}
+
+if (isset($_POST["USER"]) && isset($_POST["PASS"])) {
+  $USER = $_POST["USER"];
+  $PASS = $_POST["PASS"];
+  if (!in_array($USER, $user_list)) {
+    die("Invalid username or password");    
+  }
+  if ($user_list[$USER] != $PASS) {
+    die("Invalid username or password");
+  }
+} else {
+  die("Invalid username or password");  
+}
+
 if (isset($_POST["CMD"]) && isset($_POST["SRC"])) {
   $CMD = $_POST["CMD"];
   $SRC = $_POST["SRC"];
