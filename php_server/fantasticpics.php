@@ -2,12 +2,12 @@
 ini_set('display_errors', 'On');
 error_reporting(E_ALL | E_STRICT);
 
-$myUser = "master";
-$myPass = "master";
+$myUser = "kevin";
+$myPass = "abcdef";
 $myServer = "http://www.kbeadle.com/fp/fantasticpics.php";
 $server_list = array(
   "master" => "http://www.kbeadle.com/fp/fantasticpics.php",
-  "node1" => "http://rajat-bansal.com/fantasticpics.php",
+  "node1" => "http://rajat-bansal.com/fantastic4gallery/fantasticpics.php",
   "node2" => "http://vybbhav9.com/fantasticpics.php",
   "node3" => "http://gangania19.com/fantasticpics.php"
 );
@@ -482,14 +482,14 @@ function proc_cmd_to_node() {
 if (isset($_POST["USER"]) && isset($_POST["PASS"])) {
   $USER = $_POST["USER"];
   $PASS = $_POST["PASS"];
-  if (!in_array($USER, $user_list)) {
-    die("Invalid username or password");    
+  if (!array_key_exists($USER, $user_list)) {
+    die("Invalid username or password1");    
   }
   if ($user_list[$USER] != $PASS) {
-    die("Invalid username or password");
+    die("Invalid username or password2");
   }
 } else {
-  die("Invalid username or password");  
+  die("Invalid username or password3");  
 }
 
 // Get command and its source
