@@ -8,8 +8,8 @@ $myServer = "http://www.kbeadle.com/fp/fantasticpics.php";
 $server_list = array(
   "master" => "http://www.kbeadle.com/fp/fantasticpics.php",
   "node1" => "http://rajat-bansal.com/fantastic4gallery/fantasticpics.php",
-  "node2" => "http://vybbhav9.com/fantasticpics.php",
-  "node3" => "http://gangania19.com/fantasticpics.php"
+  "node2" => "http://vybbhav9.com/FantasticPics.php",
+  "node3" => "http://gangania19.com/FantasticPics.php"
 );
 $user_list = array(
   "kevin" => "abcdef",
@@ -483,13 +483,13 @@ if (isset($_POST["USER"]) && isset($_POST["PASS"])) {
   $USER = $_POST["USER"];
   $PASS = $_POST["PASS"];
   if (!array_key_exists($USER, $user_list)) {
-    die("Invalid username or password1");    
+    die("Invalid username or password");    
   }
   if ($user_list[$USER] != $PASS) {
-    die("Invalid username or password2");
+    die("Invalid username or password");
   }
 } else {
-  die("Invalid username or password3");  
+  die("Invalid username or password");  
 }
 
 // Get command and its source
